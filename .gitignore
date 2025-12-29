@@ -1,0 +1,33 @@
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Carpetas de dependencias
+node_modules/
+vendor/
+
+# Archivos de configuración local
+.env
+.env.local
+config.local.php
+
+# Archivos temporales
+*.tmp
+*.temp
+*.log
+*.cache
+
+# Backups
+*.backup
+*.bak
+*.old
+
+# Archivos subidos por usuarios
+uploads/*
+!uploads/.gitkeep
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-*

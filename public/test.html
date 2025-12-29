@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>SAPA V2 - Dashboard Final</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-4">
+    <div class="container">
+        <h2 class="mb-4">🎓 SAPA V2 <span class="badge bg-success">Sistema Integrado</span></h2>
+        
+        <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#curriculo">1. Malla</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#estudiantes">2. Estudiantes</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#notas">3. Notas</button></li>
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#rubricas">4. ✨ Rúbricas IA</button></li>
+        </ul>
+
+        <div class="tab-content">
+            
+            <div class="tab-pane fade" id="curriculo"><div class="alert alert-secondary">Panel de Malla (Ver versiones anteriores)</div></div>
+            <div class="tab-pane fade" id="estudiantes"><div class="alert alert-secondary">Panel de Estudiantes (Ver versiones anteriores)</div></div>
+            <div class="tab-pane fade" id="notas"><div class="alert alert-secondary">Panel de Notas (Ver versiones anteriores)</div></div>
+
+            <div class="tab-pane fade show active" id="rubricas">
+                <div class="row">
+                    <div class="col-md-5">
+                        <div class="card p-4 shadow-sm border-primary">
+                            <h5 class="text-primary mb-3">✨ Crear Rúbrica Automática</h5>
+                            
+                            <div class="mb-3">
+                                <label class="small fw-bold">ID Perfil:</label>
+                                <input type="number" id="rubIdPerfil" class="form-control" value="1">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="small fw-bold">Título Instrumento:</label>
+                                <input type="text" id="rubTitle" class="form-control" placeholder="Ej: Rúbrica de Proyecto Final">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="small fw-bold">Descripción de la Competencia:</label>
+                                <textarea id="rubCompetencia" class="form-control" rows="4" placeholder="Ej: El estudiante es capaz de diseñar una base de datos relacional normalizada y desarrollar una API REST segura..."></textarea>
+                                <div class="form-text text-muted">La IA usará esto para crear los criterios.</div>
+                            </div>
+
+                            <button onclick="generarRubrica()" class="btn btn-primary w-100">
+                                <span class="spinner-border spinner-border-sm d-none" id="rubSpinner"></span>
+                                Generar Rúbrica con IA
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-7">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-dark text-white d-flex justify-content-between">
+                                <span>Vista Previa del Instrumento</span>
+                                <span id="rubStatus" class="badge bg-secondary">Esperando...</span>
+                            </div>
+                            <div class="card-body bg-white overflow-auto">
+                                <h5 id="outTitle" class="fw-bold"></h5>
+                                <p id="outDesc" class="text-muted small"></p>
+                                
+                                <table class="table table-bordered mt-3" id="rubTable" style="display:none">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Criterio Generado</th>
+                                            <th width="15%">Peso</th>
+                                            <th width="15%">Nota Máx</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rubBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API = '/api';
+
+        async function generarRubrica() {
+            const comp = document.getElementById('rubCompetencia').value;
+            const pid = document.getElementById('rubIdPerfil').value;
+            const title = document.getElementById('rubTitle').value;
+            
+            if(!comp) return alert("Escribe una competencia.");
+
+            // UI Loading
+            document.getElementById('rubSpinner').classList.remove('d-none');
+            document.getElementById('rubStatus').className = 'badge bg-warning text-dark';
+            document.getElementById('rubStatus').innerText = 'IA Trabajando...';
+            document.getElementById('rubTable').style.display = 'none';
+
+            try {
+                const res = await fetch(API + '/instruments/ai-generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        profile_id: pid,
+                        title: title || "Rúbrica Auto", 
+                        competency_text: comp 
+                    })
+                });
+                
+                const json = await res.json();
+                
+                if(res.ok) {
+                    document.getElementById('rubStatus').className = 'badge bg-success';
+                    document.getElementById('rubStatus').innerText = '¡Generado!';
+                    
+                    // Renderizar
+                    document.getElementById('outTitle').innerText = json.title;
+                    document.getElementById('outDesc').innerText = json.description;
+                    
+                    const tbody = document.getElementById('rubBody');
+                    tbody.innerHTML = '';
+                    
+                    json.criteria.forEach(c => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${c.description}</td>
+                                <td>${c.weight}%</td>
+                                <td>${c.max_score}.0</td>
+                            </tr>
+                        `;
+                    });
+                    document.getElementById('rubTable').style.display = 'table';
+                } else {
+                    document.getElementById('rubStatus').innerText = 'Error';
+                    alert("Error: " + json.error);
+                }
+            } catch (e) {
+                alert("Error de conexión");
+            } finally {
+                document.getElementById('rubSpinner').classList.add('d-none');
+            }
+        }
+    </script>
+</body>
+</html>

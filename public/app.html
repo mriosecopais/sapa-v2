@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAPA V2 | Gestión Curricular</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --sidebar-width: 260px; --primary-color: #0d6efd; }
+        body { font-family: 'Inter', sans-serif; background-color: #f4f6f9; }
+        
+        .sidebar { 
+            width: var(--sidebar-width); 
+            height: 100vh; 
+            background: #212529; 
+            color: #fff; 
+            position: fixed; 
+            top: 0; left: 0; 
+            z-index: 1000; 
+            overflow-y: auto;
+        }
+        .nav-link { color: #adb5bd; padding: 12px 20px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
+        .nav-link:hover, .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); border-left: 4px solid var(--primary-color); }
+        .nav-link i { font-size: 1.1rem; }
+
+        .main-content { 
+            margin-left: var(--sidebar-width); 
+            padding: 20px; 
+            min-height: 100vh;
+        }
+        
+        .card { border: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 20px; }
+        .hidden-section { display: none !important; }
+        .cursor-pointer { cursor: pointer; }
+        
+        .semestre-col { min-width: 180px; background: #f8f9fa; border-radius: 8px; padding: 10px; margin-right: 15px; border: 1px dashed #dee2e6; }
+        .asignatura-card { background: white; border-left: 4px solid var(--primary-color); padding: 8px; margin-bottom: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 0.85rem; }
+        .asignatura-card:hover { transform: translateY(-2px); transition: transform 0.2s; }
+        .asignatura-card.electiva { border-left-color: #ffc107; }
+    </style>
+</head>
+<body>
+
+    <!-- ========== SIDEBAR ========== -->
+    <nav class="sidebar">
+        <div class="p-3 border-bottom border-secondary d-flex align-items-center gap-2 sticky-top bg-dark">
+            <i class="bi bi-grid-1x2-fill text-primary fs-5"></i>
+            <h5 class="m-0 fw-bold">SAPA <span class="badge bg-primary fs-6">v2.3</span></h5>
+        </div>
+        
+        <small class="text-uppercase text-muted fw-bold p-3 pb-1 d-block" style="font-size: 0.75rem;">Gestión Curricular</small>
+        <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link active" onclick="navTo('dashboard')"><i class="bi bi-speedometer2"></i> Inicio</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="navTo('perfiles')"><i class="bi bi-building"></i> 1.1 Perfiles y Carreras</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="navTo('transversales')"><i class="bi bi-globe"></i> 1.2 Comp. Transversales</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="navTo('actividades')"><i class="bi bi-journal-bookmark"></i> 1.3 Gestión de Actividades</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="navTo('matriz')"><i class="bi bi-table"></i> 1.4 Matriz Tributación</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="navTo('malla')"><i class="bi bi-diagram-3"></i> 1.5 Malla Curricular</a></li>
+        </ul>
+
+        <small class="text-uppercase text-muted fw-bold p-3 pb-1 d-block mt-2" style="font-size: 0.75rem;">Evaluación</small>
+        <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" onclick="navTo('estudiantes')"><i class="bi bi-people"></i> 2.1 Estudiantes</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="navTo('ia-lab')"><i class="bi bi-stars"></i> IA & Rúbricas</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="navTo('evaluacion')"><i class="bi bi-pen"></i> 2.3 Sala de Evaluación</a></li>
+            <li class="nav-item"><a class="nav-link" onclick="navTo('reportes')"><i class="bi bi-graph-up-arrow"></i> 3.0 Reportes Acreditación</a></li>
+        </ul>
+
+        <div class="mt-auto p-3">
+            <button onclick="logout()" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-box-arrow-left"></i> Salir</button>
+        </div>
+    </nav>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <div class="main-content">
+        
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm">
+            <h5 class="m-0 text-secondary" id="pageTitle">Dashboard</h5>
+            <div class="d-flex align-items-center gap-2">
+                <div class="text-end lh-1">
+                    <div class="fw-bold" id="userName">Cargando...</div>
+                    <small class="text-muted" id="userRole">...</small>
+                </div>
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 40px; height: 40px;">
+                    <i class="bi bi-person-fill fs-5"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== SECCIÓN: DASHBOARD ========== -->
+        <div id="dashboard" class="app-section">
+            <div class="alert alert-primary shadow-sm border-0">
+                <h4 class="alert-heading"><i class="bi bi-emoji-smile"></i> ¡Bienvenido al Panel!</h4>
+                <p class="mb-0">Sistema de Gestión Curricular y Acreditación.</p>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="card p-4 text-center border-start border-4 border-primary">
+                        <h2 class="fw-bold text-primary" id="dashProfilesCount">-</h2>
+                        <small class="text-muted fw-bold">Perfiles Activos</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== SECCIÓN: PERFILES ========== -->
+        <div id="perfiles" class="app-section hidden-section">
+            <div class="row">
+                <div class="col-md-3 border-end">
+                    <div class="d-grid gap-2 mb-3">
+                        <button class="btn btn-success fw-bold" onclick="limpiarFormularioPerfil()">
+                            <i class="bi bi-plus-lg"></i> Crear Nuevo Perfil
+                        </button>
+                        <input type="text" id="filtroPerfiles" class="form-control form-control-sm" placeholder="🔍 Buscar perfil..." onkeyup="filtrarListaPerfiles()">
+                    </div>
+                    <div class="list-group list-group-flush" id="listaPerfilesSide" style="max-height: 75vh; overflow-y: auto;"></div>
+                </div>
+
+                <div class="col-md-9">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                            <h5 class="m-0 fw-bold" id="tituloFormPerfil"><i class="bi bi-pencil-square"></i> Nuevo Perfil</h5>
+                            <button class="btn btn-danger btn-sm d-none" id="btnEliminarPerfil" onclick="eliminarPerfilActual()">
+                                <i class="bi bi-trash"></i> Eliminar
+                            </button>
+                        </div>
+                        <div class="card-body bg-light">
+                            <form id="formPerfil" onsubmit="guardarPerfil(event)">
+                                <input type="hidden" id="profId">
+                                
+                                <div class="row g-3">
+                                    <div class="col-md-9">
+                                        <label class="form-label fw-bold">Nombre del Perfil *</label>
+                                        <input type="text" id="profName" class="form-control" required placeholder="Ej: Pedagogía en Educación Física">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold text-muted">Código Interno</label>
+                                        <input type="text" id="profCode" class="form-control bg-white" readonly placeholder="(Automático)">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <div class="form-check p-3 border rounded bg-white">
+                                            <input class="form-check-input" type="checkbox" id="profLicenciatura" onchange="toggleLicenciaturaUI()">
+                                            <label class="form-check-label fw-bold text-primary ms-2" for="profLicenciatura">
+                                                <i class="bi bi-mortarboard-fill"></i> Con Licenciatura en Educación
+                                            </label>
+                                            <div class="text-muted small ms-4">Si marcas esto, se cargarán automáticamente las competencias de pedagogía.</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold">Descripción</label>
+                                        <div class="input-group">
+                                            <textarea id="profDesc" class="form-control" rows="2"></textarea>
+                                            <button type="button" class="btn btn-info text-white" onclick="iaSugerirDescripcion()">
+                                                <i class="bi bi-magic"></i> Sugerir con IA
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Carrera *</label>
+                                        <input type="text" id="profCareer" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Facultad *</label>
+                                        <input type="text" id="profFaculty" class="form-control" required>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <label class="form-label small">Director/a</label>
+                                        <input type="text" id="profDirector" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small">Duración (Sem)</label>
+                                        <input type="number" id="profDuration" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small">Años Acreditación</label>
+                                        <input type="number" id="profAccreditation" class="form-control form-control-sm">
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 text-end border-top pt-3">
+                                    <button type="button" class="btn btn-secondary me-2" onclick="limpiarFormularioPerfil()">Cancelar</button>
+                                    <button type="submit" class="btn btn-success fw-bold px-4"><i class="bi bi-save"></i> Guardar Perfil</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div id="seccionCompetencias" class="card d-none border-0 shadow-sm">
+                        <div class="card-header bg-white border-bottom-0 pb-0 d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold text-dark"><i class="bi bi-list-stars"></i> Competencias del Perfil</h5>
+                            <button class="btn btn-success btn-sm" onclick="abrirModalCompetencia()">
+                                <i class="bi bi-plus-circle"></i> Añadir Competencia
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning small py-2 d-none" id="alertGuardarPrimero">
+                                <i class="bi bi-info-circle"></i> Debes guardar el perfil para editar competencias.
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <tbody id="tablaCompetenciasBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== SECCIÓN: ACTIVIDADES ========== -->
+        <div id="actividades" class="app-section hidden-section">
+            <h4 class="mb-3 fw-bold"><i class="bi bi-journal-bookmark"></i> Actividades Curriculares</h4>
+            
+            <div class="card mb-4">
+                <div class="card-body bg-light">
+                    <label class="fw-bold">Seleccionar Perfil de Egreso:</label>
+                    <select id="actividadSelectPerfil" class="form-select" onchange="cargarActividadesPorPerfil()">
+                        <option value="">-- Seleccionar --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="m-0">Malla / Lista de Asignaturas</h5>
+                <button class="btn btn-success" onclick="crearNuevaActividad()"><i class="bi bi-plus-lg"></i> Nueva Actividad</button>
+            </div>
+
+            <div id="listaActividadesContainer"></div>
+        </div>
+
+        <!-- ========== SECCIÓN: TRANSVERSALES ========== -->
+        <div id="transversales" class="app-section hidden-section">
+            <h4 class="mb-4 fw-bold"><i class="bi bi-globe"></i> Gestión de Competencias Transversales</h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card h-100 border-warning">
+                        <div class="card-header bg-warning text-dark fw-bold d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-star-fill"></i> Competencias Sello</span>
+                            <button class="btn btn-sm btn-dark" onclick="abrirModalTransversal('seal')"><i class="bi bi-plus"></i> Nueva</button>
+                        </div>
+                        <div class="card-body" style="max-height:300px;overflow-y:auto;">
+                            <p class="small text-muted">Aparecen en <strong>todas</strong> las carreras de la institución.</p>
+                            <div id="listaSello" class="list-group list-group-flush shadow-sm" style="min-height: 50px;">
+                                <div class="text-center text-muted p-2">Esperando datos...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card h-100 border-info">
+                        <div class="card-header bg-info text-white fw-bold d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-mortarboard-fill"></i> Licenciatura en Educación</span>
+                            <button class="btn btn-sm btn-light text-info fw-bold" onclick="abrirModalTransversal('licensure')"><i class="bi bi-plus"></i> Nueva</button>
+                        </div>
+                        <div class="card-body" style="max-height:300px;overflow-y:auto;">
+                            <p class="small text-muted">Aparecen solo en carreras marcadas como <strong>"Con Licenciatura"</strong>.</p>
+                            <div id="listaLicenciatura" class="list-group list-group-flush shadow-sm" style="min-height: 50px;">
+                                <div class="text-center text-muted p-2">Esperando datos...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== SECCIÓN: MATRIZ ========== -->
+        <div id="matriz" class="app-section hidden-section">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h6 class="m-0 fw-bold">Matriz de Tributación</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <select id="matrizSelectPerfil" class="form-select form-select-sm" onchange="cargarMatriz()">
+                                <option value="">-- Seleccionar Perfil --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body overflow-auto p-0" style="max-height: 70vh;">
+                    <div id="matrizLoader" class="text-center p-5 d-none"><div class="spinner-border text-primary"></div></div>
+                    <div id="matrizView">
+                        <p class="text-center text-muted p-5">Selecciona un perfil para cargar la matriz.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== SECCIÓN: MALLA ========== -->
+        <div id="malla" class="app-section hidden-section">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card p-3">
+                        <label class="small fw-bold mb-1">Perfil:</label>
+                        <select id="mallaSelectPerfil" class="form-select form-select-sm mb-3" onchange="cargarMalla()">
+                            <option value="">-- Seleccionar --</option>
+                        </select>
+                        <hr>
+                        <h6 class="small fw-bold">Agregar Asignatura</h6>
+                        <input type="text" id="mallaActName" class="form-control mb-2 form-control-sm" placeholder="Nombre">
+                        <div class="row g-1">
+                            <div class="col"><input type="number" id="mallaActSem" class="form-control form-control-sm" placeholder="Sem" value="1"></div>
+                            <div class="col"><select id="mallaActType" class="form-select form-select-sm"><option value="obligatoria">Oblig.</option><option value="electiva">Elect.</option></select></div>
+                        </div>
+                        <button onclick="crearActividad()" class="btn btn-success btn-sm w-100 mt-2">Agregar</button>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <div class="card h-100">
+                        <div class="card-body overflow-auto bg-light">
+                            <div id="mallaContainer" class="d-flex align-items-start" style="min-height: 400px;">
+                                <div class="text-muted m-auto text-center"><i class="bi bi-arrow-left fs-3"></i><br>Carga un perfil</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== SECCIÓN: ESTUDIANTES ========== -->
+        <div id="estudiantes" class="app-section hidden-section">
+            <div class="row">
+                <div class="col-md-5">
+                    <div class="card h-100">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 fw-bold">Instrumentos de Evaluación</h6>
+                            <button class="btn btn-primary btn-sm" onclick="mostrarCrearEncuesta()"><i class="bi bi-plus-lg"></i> Crear Encuesta</button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush" id="listaEncuestas"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-7">
+                    <div id="panelConstruccion" class="card border-primary d-none">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between">
+                            <span>Construyendo: <b id="newSurveyTitle">Nueva Encuesta</b></span>
+                            <button class="btn btn-sm btn-light text-primary" onclick="guardarInstrumentoConf()">Guardar y Cerrar</button>
+                        </div>
+                        <div class="card-body">
+                            <input type="hidden" id="currentInstId">
+                            <p class="small text-muted">Selecciona las competencias que deseas evaluar en esta encuesta:</p>
+                            <div id="listaCompetenciasCheck" class="overflow-auto" style="max-height: 400px;"></div>
+                            <button class="btn btn-success w-100 mt-3" onclick="agregarCompetenciasSeleccionadas()">
+                                <i class="bi bi-arrow-down-square"></i> Agregar al Instrumento
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="vistaPreviaInst" class="card h-100 bg-light">
+                        <div class="card-body text-center text-muted d-flex flex-column justify-content-center align-items-center">
+                            <i class="bi bi-file-earmark-bar-graph fs-1"></i>
+                            <p class="mt-2">Selecciona una encuesta para ver su detalle o publicar.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== SECCIÓN: IA LAB ========== -->
+        <div id="ia-lab" class="app-section hidden-section">
+            <div class="row">
+                <div class="col-md-5">
+                    <div class="card p-4">
+                        <h6 class="fw-bold text-primary mb-3">✨ Generador IA</h6>
+                        <label class="small text-muted">Perfil:</label>
+                        <select id="rubSelectPerfil" class="form-select form-select-sm mb-2"></select>
+                        <label class="small text-muted">Competencia a evaluar:</label>
+                        <textarea id="rubPrompt" class="form-control mb-3" rows="5" placeholder="Pega aquí la competencia..."></textarea>
+                        <button onclick="generarRubrica()" id="btnRub" class="btn btn-dark w-100">Generar Rúbrica</button>
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    <div class="card h-100 p-3 bg-light overflow-auto" id="rubResult">
+                        <small class="text-muted">Resultados...</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== SECCIÓN: EVALUACIÓN ========== -->
+        <div id="evaluacion" class="app-section hidden-section">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <h6 class="fw-bold mb-3">Configurar Evaluación</h6>
+                        
+                        <label class="small text-muted">1. Seleccionar Rúbrica / Caso</label>
+                        <select id="evalRubricaSelect" class="form-select mb-3" onchange="cargarVistaPreviaRubrica()">
+                            <option value="">Cargando...</option>
+                        </select>
+
+                        <label class="small text-muted">2. Seleccionar Estudiante</label>
+                        <select id="evalStudentSelect" class="form-select mb-3">
+                            <option value="">Cargando...</option>
+                        </select>
+
+                        <div class="alert alert-info small mt-3">
+                            <i class="bi bi-info-circle"></i> Selecciona ambos campos para desplegar la hoja de evaluación.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="card h-100">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                            <span class="fw-bold"><i class="bi bi-clipboard-check"></i> Hoja de Evaluación</span>
+                            <span class="badge bg-white text-primary" id="notaFinalPreview">Nota: -</span>
+                        </div>
+                        <div class="card-body overflow-auto" id="evalSheetContainer">
+                            <div class="text-center text-muted mt-5">
+                                <i class="bi bi-arrow-left fs-1"></i>
+                                <p>Configura la evaluación a la izquierda.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer bg-white d-none" id="evalFooter">
+                            <div class="mb-3 border p-2 rounded bg-light">
+                                <label class="small fw-bold mb-1"><i class="bi bi-paperclip"></i> Adjuntar Evidencia (PDF/Foto)</label>
+                                <input type="file" id="evidenceFile" class="form-control form-control-sm">
+                                <small class="text-muted" style="font-size: 0.75rem;">Sube el trabajo del alumno para respaldar la nota.</small>
+                            </div>
+                            <button class="btn btn-success w-100 fw-bold" onclick="guardarEvaluacion()">
+                                Finalizar y Guardar Nota
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== SECCIÓN: REPORTES ========== -->
+        <div id="reportes" class="app-section hidden-section">
+            <div class="card mb-3">
+                <div class="card-body d-flex align-items-center gap-3 bg-white">
+                    <i class="bi bi-graph-up text-primary fs-3"></i>
+                    <div class="flex-grow-1">
+                        <h5 class="m-0 fw-bold">Triangulación de Competencias</h5>
+                        <small class="text-muted">Comparativa: Desempeño Docente (Realidad) vs Autoevaluación Estudiante (Percepción)</small>
+                    </div>
+                    <select id="reportProfileSelect" class="form-select w-auto" onchange="cargarReporteBrechas()">
+                        <option value="">Selecciona Carrera...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-7">
+                    <div class="card h-100">
+                        <div class="card-header bg-white fw-bold">Análisis de Brechas</div>
+                        <div class="card-body" id="reportChartContainer">
+                            <p class="text-center text-muted p-5">Selecciona una carrera para analizar.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-5">
+                    <div class="card h-100 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <i class="bi bi-robot"></i> Análisis Inteligente
+                        </div>
+                        <div class="card-body">
+                            <p class="small">La IA analizará las brechas detectadas y sugerirá acciones de mejora para el Plan de Mejoras de la carrera.</p>
+                            <button class="btn btn-dark w-100 mb-3" onclick="analizarReporteConIA()" id="btnAnalizarReporte">
+                                Generar Informe Ejecutivo
+                            </button>
+                            <div id="aiReportResult" class="bg-light p-3 rounded border" style="min-height: 200px; font-size: 0.9rem;">
+                                <em>El informe aparecerá aquí...</em>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- FIN MAIN-CONTENT -->
+
+    <!-- ========== MODALES ========== -->
+
+    <!-- Modal: Editor de Actividad -->
+    <div class="modal fade" id="modalEditorActividad" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Editando Actividad Curricular</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <ul class="nav nav-tabs nav-fill bg-light" id="activityTabs" role="tablist">
+                        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tabIdentificacion">1. Identificación</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabCompetencias">2. Competencias</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabRuta">3. Ruta Aprendizaje</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabRecursos">4. Recursos/Biblio</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabDocente">5. Perfil Docente</a></li>
+                    </ul>
+
+                    <div class="tab-content p-4">
+                        <div class="tab-pane fade show active" id="tabIdentificacion">
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="form-label">Nombre Actividad</label>
+                                    <input type="text" id="actName" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-muted">Código Interno</label>
+                                    <input type="text" id="actCode" class="form-control bg-light" readonly placeholder="(Automático)">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Créditos SCT</label>
+                                    <input type="number" id="actSct" class="form-control">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Semestre</label>
+                                    <input type="number" id="actSem" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Requisito Asistencia</label>
+                                    <input type="text" id="actAtt" class="form-control">
+                                </div>
+                                
+                                <div class="col-md-4"><label class="small text-muted">Hrs Cronológicas</label><input type="number" id="actHrsC" class="form-control"></div>
+                                <div class="col-md-4"><label class="small text-muted">Hrs Docencia</label><input type="number" id="actHrsD" class="form-control"></div>
+                                <div class="col-md-4"><label class="small text-muted">Hrs Autónomas</label><input type="number" id="actHrsA" class="form-control"></div>
+                                
+                                <div class="col-12">
+                                    <label class="form-label">Pre-requisitos</label>
+                                    <input type="text" id="actPre" class="form-control">
+                                </div>
+                                
+                                <div class="col-12 text-end mt-4 pt-3 border-top">
+                                    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
+                                        <i class="bi bi-x-lg"></i> Cerrar
+                                    </button>
+                                    <button class="btn btn-primary px-4 fw-bold" onclick="guardarIdentificacion()">
+                                        <i class="bi bi-save"></i> Guardar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="tabCompetencias">
+                            <div class="alert alert-info">Aquí vincularemos las competencias del perfil a esta asignatura. (En desarrollo)</div>
+                        </div>
+
+                        <div class="tab-pane fade" id="tabRuta">
+                            <div class="alert alert-info">Aquí definiremos los Resultados de Aprendizaje para cada competencia vinculada.</div>
+                        </div>
+
+                        <div class="tab-pane fade" id="tabRecursos">
+                            <div class="alert alert-info">Recursos y bibliografía. (En desarrollo)</div>
+                        </div>
+
+                        <div class="tab-pane fade" id="tabDocente">
+                            <div class="alert alert-info">Perfil docente requerido. (En desarrollo)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Competencia Disciplinar -->
+    <div class="modal fade" id="modalCompDisc" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Nueva Competencia Disciplinar</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="fw-bold">Descripción:</label>
+                    <textarea id="newCompDesc" class="form-control mb-3" rows="4"></textarea>
+                    <button class="btn btn-outline-info btn-sm w-100" onclick="iaSugerirCompetencia()">
+                        <i class="bi bi-robot"></i> Pedir a la IA que redacte una competencia basada en el perfil
+                    </button>
+                    <div id="iaCompResult" class="text-muted small mt-2"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-primary" onclick="guardarCompetenciaDisciplinar()">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Competencia Transversal -->
+    <div class="modal fade" id="modalTransversal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="tituloModalTrans">Nueva Competencia</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="transId">
+                    <input type="hidden" id="transScope">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Descripción General:</label>
+                        <textarea id="transDesc" class="form-control" rows="3" placeholder="Ej: Demostrar comportamiento ético..."></textarea>
+                    </div>
+                    
+                    <div class="card bg-light border-0">
+                        <div class="card-body pt-2 pb-2">
+                            <label class="small fw-bold text-muted mb-2">Trayectoria de Desempeño:</label>
+                            
+                            <div class="input-group input-group-sm mb-2">
+                                <span class="input-group-text bg-white fw-bold text-secondary" style="width: 90px;">Nivel 1</span>
+                                <input type="text" id="transL1" class="form-control" placeholder="Desempeño Básico...">
+                            </div>
+                            
+                            <div class="input-group input-group-sm mb-2">
+                                <span class="input-group-text bg-white fw-bold text-primary" style="width: 90px;">Nivel 2</span>
+                                <input type="text" id="transL2" class="form-control" placeholder="Desempeño Intermedio...">
+                            </div>
+                            
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white fw-bold text-success" style="width: 90px;">Nivel 3</span>
+                                <input type="text" id="transL3" class="form-control" placeholder="Desempeño Avanzado...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarTransversal()">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Crear Perfil (simple) -->
+    <div class="modal fade" id="modalPerfil" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Crear Perfil</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="text" id="modalProfCode" class="form-control mb-2" placeholder="Código (Ej: INF-01)">
+                    <input type="text" id="modalProfName" class="form-control mb-2" placeholder="Nombre Carrera">
+                    <input type="text" id="modalProfFaculty" class="form-control mb-2" placeholder="Facultad">
+                    <input type="text" id="modalProfCareer" class="form-control" placeholder="Título">
+                </div>
+                <div class="modal-footer"><button class="btn btn-primary" onclick="crearPerfil()">Guardar</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Nueva Encuesta -->
+    <div class="modal fade" id="modalNewSurvey" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva Encuesta Institucional</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">1. Selecciona la Carrera (Perfil)</label>
+                        <select id="newSurveyProfile" class="form-select">
+                            <option value="">Cargando carreras...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">2. Título de la Encuesta</label>
+                        <input type="text" id="newSurveyTitleInput" class="form-control" placeholder="Ej: Autoevaluación Competencias 2025-1">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción (Opcional)</label>
+                        <textarea id="newSurveyDesc" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarNuevaEncuesta()">Crear Encuesta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Responder Encuesta -->
+    <div class="modal fade" id="modalAnswerSurvey" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Responder Encuesta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <div class="mb-3">
+                        <label class="fw-bold">Simular Alumno:</label>
+                        <select id="surveyRespondentSelect" class="form-select"></select>
+                    </div>
+                    <hr>
+                    <form id="formRespuestasEncuesta">
+                        <div id="surveyQuestionsContainer">Cargando...</div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success fw-bold" onclick="enviarRespuestaEncuesta()">Enviar Respuestas</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SCRIPTS ========== -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/globals_v2.js"></script>
+    <script src="js/perfiles_v2.js"></script>
+    <script src="js/evaluations.js?v=999"></script>
+    <script src="js/analytics.js?v=999"></script>
+    <script src="js/app_core_v2.js"></script>
+    <script src="js/actividades_v2.js"></script>
+
+</body>
+</html>

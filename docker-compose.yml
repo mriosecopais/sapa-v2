@@ -1,0 +1,75 @@
+services:
+  # APLICACIÓN (PHP)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sapa_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    # --- AGREGA ESTO AQUÍ ---
+    env_file:
+      - .env
+    # ------------------------
+    volumes:
+      - ./src:/var/www/html/src
+      - ./public:/var/www/html/public
+    networks:
+      - sapa-network
+
+  # SERVIDOR WEB (Nginx)
+  web:
+    image: nginx:alpine
+    container_name: sapa_nginx
+    restart: unless-stopped
+    ports:
+      - "${PORT_WEB}:80"
+    volumes:
+      - ./src:/var/www/html/src
+      - ./public:/var/www/html/public
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - app
+    networks:
+      - sapa-network
+
+  # BASE DE DATOS (MySQL)
+  db:
+    image: mysql:8.0
+    container_name: sapa_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+    ports:
+      - "${PORT_DB}:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+      # ESTO ES IMPORTANTE: Importará tu SQL automáticamente
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - sapa-network
+
+  # PHPMYADMIN (Gestor Visual de BD)
+  pma:
+    image: phpmyadmin/phpmyadmin
+    container_name: sapa_pma
+    environment:
+      PMA_HOST: db
+#      PMA_USER: ${DB_USERNAME}
+#      PMA_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${PORT_PMA}:80"
+    depends_on:
+      - db
+    networks:
+      - sapa-network
+
+networks:
+  sapa-network:
+    driver: bridge
+
+volumes:
+  dbdata:
